@@ -12,7 +12,7 @@ namespace localbot
     class Program
     {
 
-        static string path = @"c:\users\Owen\desktop\config.txt";
+        static string path = @"c:\users\Owen\desktop\config.txt"; // put your own config w auth token
         static string token = File.ReadAllText(path);
 
         public static void Main(string[] args)
@@ -20,9 +20,6 @@ namespace localbot
 
         public async Task MainAsync()
         {
-            
-
-
             using (var services = ConfigureServices())
             {
                 var client = services.GetRequiredService<DiscordSocketClient>();
@@ -37,7 +34,6 @@ namespace localbot
 
                 await Task.Delay(-1);
             }
-
         }
 
         private Task LogAsync(LogMessage log)

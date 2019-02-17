@@ -16,22 +16,25 @@ namespace localbot
         [Command("localhelp")]
         public async Task LocalHelp()
         {
-            await (Context.User as SocketGuildUser).SendMessageAsync(
-                "`Color Commands:`\n\n" +
-                "`set_color <color>`" +
-                "\nsets user color to the role with the color_ prefix\n\n" +
-                "`remove_color" +
-                "\nremoves any roles with the color_ prefix from user\n\n" +
-                "Anon Commands:\n" +
-                "DM these commands to the bot\n\n" +
-                "`newID` <id>" +
-                "\nchoose your id number (between 0 and 1000)\n\n" +
-                "`anon <message>`" +
-                "\nsends a message to the relevant anon channel using your id\n\n" +
-                "`blacklist <anon-id>`" +
-                "\nprevents discord user behind <anon-id> from using the bot\n\n" +
-                "`unblacklist <discord-tag>`" +
-                "\nremoves a user from the blacklist"
+            await (Context.User as SocketGuildUser).SendMessageAsync("`localBot Commands:`\n" +
+                "\n" +
+                "`newID <id-number>`\n" +
+                "assigns <id-number> to the user for use with `anon`\n" +
+                "\n" +
+                "`anon <message>" +
+                "sends a message using the bot under your <id-number> alias\n" +
+                "\n" +
+                "`blacklist <id-number>\n" +
+                "prevents a discord user with anon-id <id-number> from using the bot\n" +
+                "\n" +
+                "`unblacklist <discord-tag>\n" +
+                "removes a discord user from the blacklist\n" +
+                "\n" +
+                "`set_color <color>`\n" +
+                "assigns the user the role <color>. only works with roles that start with prefix color_\n" +
+                "\n" +
+                "`remove_color`\n" +
+                "removes all _color roles from user"
                 );
         }
 
