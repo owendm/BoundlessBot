@@ -16,6 +16,7 @@ namespace localbot
         [Command("localhelp")]
         public async Task LocalHelp()
         {
+
             await (Context.User as SocketGuildUser).SendMessageAsync("`localBot Commands:`\n" +
                 "\n" +
                 "`newID <id-number>`\n" +
@@ -78,7 +79,6 @@ namespace localbot
 
             await ReplyAsync($"Color {color} not found");
         }
-
 
     }
 }

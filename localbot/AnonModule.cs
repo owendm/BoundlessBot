@@ -32,6 +32,14 @@ namespace localbot
             await ReplyAsync($"anon channel disabled");
         }
 
+        [Command("reset_anon")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task ResetAnon()
+        {
+            anon_users = new Dictionary<ulong, int>();
+            await ReplyAsync($"anon numbers reset");
+        }
+
         [Command("blacklist")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task Blacklist(int num)
@@ -128,6 +136,7 @@ namespace localbot
             int current_id = anon_users[Context.User.Id];
             await (anon_channel).SendMessageAsync($"`{current_id}:` {text}");
         }
+
 
     }
 }
