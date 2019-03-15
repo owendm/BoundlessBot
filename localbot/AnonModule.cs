@@ -14,13 +14,13 @@ namespace localbot
         public const int maxID = 1000;
         public const int historyLength = 5;
 
-        private class anonUser
+        private class AnonUser
         {
             public ulong user { get; set; }
             private Stack<int> ids;
             public DateTime lastNewID { get; set; }
 
-            public anonUser(ulong user)
+            public AnonUser(ulong user)
             {
                 this.user = user;
                 ids = new Stack<int>();
@@ -51,7 +51,7 @@ namespace localbot
                 return foundID;
             }
 
-            public void newAlias(int alias)
+            public void NewAlias(int alias)
             {
                 ids.Push(alias);
             }
@@ -63,10 +63,10 @@ namespace localbot
         private static SocketTextChannel anon_channel;
         private TimeSpan cooldown = new TimeSpan(0, 00, 10);
 
-        private static List<anonUser> activeUsers = new List<anonUser>();
-        private static List<anonUser> blacklist = new List<anonUser>();
+        private static List<AnonUser> activeUsers = new List<AnonUser>();
+        private static List<AnonUser> blacklist = new List<AnonUser>();
 
-        [Command("set_anon_channel")]
+        [Command(">set_anon_channel")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetChannel()
         {
@@ -74,7 +74,7 @@ namespace localbot
             await ReplyAsync($"anon channel set");
         }
 
-        [Command("disable_anon_channel")]
+        [Command(">disable_anon_channel")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task DisableChannel()
         {
@@ -82,23 +82,23 @@ namespace localbot
             await ReplyAsync($"anon channel disabled");
         }
 
-        [Command("reset_anon")]
+        [Command(">reset_anon")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ResetAnon()
         {
-            activeUsers = new List<anonUser>();
+            activeUsers = new List<AnonUser>();
             await ReplyAsync($"anon numbers reset");
         }
 
-        [Command("blacklist")]
+        [Command(">blacklist")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task Blacklist(int num)
         {
-            foreach(anonUser u in activeUsers)
+            foreach(AnonUser u in activeUsers)
             {
                 if(u.AliasAs(num))
                 {
-                    anonUser suspect = u;
+                    AnonUser suspect = u;
                     activeUsers.Remove(u);
                     blacklist.Add(u);
                     await ReplyAsync($"user was blacklisted");
@@ -109,7 +109,7 @@ namespace localbot
             }
         }
 
-        [Command("unblacklist")]
+        [Command(">unblacklist")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task UnBlacklist(IGuildUser user)
         {
@@ -124,7 +124,7 @@ namespace localbot
 
         }
 
-        [Command("newid")]
+        [Command(">newid")]
         public async Task NewID([Remainder] int num)
         {
             if (isBlacklisted(Context.User.Id))
@@ -135,7 +135,7 @@ namespace localbot
 
             if (GetUser(Context.User.Id) == null)
             {
-                activeUsers.Add(new anonUser(Context.User.Id));
+                activeUsers.Add(new AnonUser(Context.User.Id));
                 GetUser(Context.User.Id).lastNewID = DateTime.Now;
             } else if (DateTime.Now - GetUser(Context.User.Id).lastNewID < cooldown)
             {
@@ -155,10 +155,10 @@ namespace localbot
                 return;
             }
             
-            GetUser(Context.User.Id).newAlias(num);
+            GetUser(Context.User.Id).NewAlias(num);
             GetUser(Context.User.Id).lastNewID = DateTime.Now;
 
-            await (Context.User).SendMessageAsync($"you are now speaking under id: {num}");
+            await (Context.User).SendMessageAsync($"you are now speaking under id: '{num}'");
         }
 
         [Command("newid")]
@@ -171,7 +171,7 @@ namespace localbot
             }
             if (GetUser(Context.User.Id) == null)
             {
-                activeUsers.Add(new anonUser(Context.User.Id));
+                activeUsers.Add(new AnonUser(Context.User.Id));
                 GetUser(Context.User.Id).lastNewID = DateTime.Now;
             } else if (DateTime.Now - GetUser(Context.User.Id).lastNewID < cooldown)
             {
@@ -191,10 +191,10 @@ namespace localbot
                 random.Next(maxID);
             }
             
-            GetUser(Context.User.Id).newAlias(num);
+            GetUser(Context.User.Id).NewAlias(num);
             GetUser(Context.User.Id).lastNewID = DateTime.Now;
 
-            await (Context.User).SendMessageAsync($"you are now speaking under id: {num}");
+            await (Context.User).SendMessageAsync($"you are now speaking under id: '{num}'");
         }
 
         [Command("anon")]
@@ -216,9 +216,15 @@ namespace localbot
             await (anon_channel).SendMessageAsync($"`{current_id}:` {text}");
         }
 
+        // To Implement: Check context to polish responses when commands executed in wrong context
+        private bool ContextCheck(SocketCommandContext current, String opt)
+        {
+            return true;            
+        }
+
         private bool RecentlyUsed(int id)
         {
-            foreach(anonUser user in activeUsers)
+            foreach(AnonUser user in activeUsers)
             {
                 if(user.AliasAs(id) == true)
                 {
@@ -228,9 +234,9 @@ namespace localbot
             return false;
         }
 
-        private anonUser GetUser(ulong user)
+        private AnonUser GetUser(ulong user)
         {
-            foreach(anonUser u in activeUsers)
+            foreach(AnonUser u in activeUsers)
             {
                 if (u.user == user)
                 {
@@ -239,9 +245,9 @@ namespace localbot
             }
             return null;
         }
-        private anonUser GetUser(int id)
+        private AnonUser GetUser(int id)
         {
-            foreach (anonUser u in activeUsers)
+            foreach (AnonUser u in activeUsers)
             {
                 if (u.getID() == id)
                 {
@@ -251,9 +257,9 @@ namespace localbot
             return null;
         }
 
-        private anonUser GetBlUser(ulong user)
+        private AnonUser GetBlUser(ulong user)
         {
-            foreach (anonUser u in blacklist)
+            foreach (AnonUser u in blacklist)
             {
                 if (u.user == user)
                 {
@@ -265,7 +271,7 @@ namespace localbot
 
         private bool IsActiveUser(ulong user)
         {
-            foreach (anonUser u in activeUsers)
+            foreach (AnonUser u in activeUsers)
             {
                 if (u.user == user)
                 {
@@ -277,7 +283,7 @@ namespace localbot
 
         private bool isBlacklisted(ulong user)
         {
-            foreach(anonUser u in blacklist)
+            foreach(AnonUser u in blacklist)
             {
                 if (u.user == user)
                 {
