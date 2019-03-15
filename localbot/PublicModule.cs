@@ -13,7 +13,7 @@ namespace localbot
     public class PublicModule : ModuleBase<SocketCommandContext>
     {
 
-        [Command("localhelp")]
+        [Command(">localhelp")]
         public async Task LocalHelp()
         {
 

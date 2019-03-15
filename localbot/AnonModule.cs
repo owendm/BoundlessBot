@@ -161,7 +161,7 @@ namespace localbot
             await (Context.User).SendMessageAsync($"you are now speaking under id: '{num}'");
         }
 
-        [Command("newid")]
+        [Command(">newid")]
         public async Task NewID()
         {
             if (isBlacklisted(Context.User.Id))
@@ -197,7 +197,7 @@ namespace localbot
             await (Context.User).SendMessageAsync($"you are now speaking under id: '{num}'");
         }
 
-        [Command("anon")]
+        [Command(">anon")]
         public async Task Anon([Remainder] string text)
         {
             if (isBlacklisted(Context.User.Id))
@@ -211,7 +211,7 @@ namespace localbot
                 await (Context.User).SendMessageAsync("please generate an id with `newID`");
                 return;
             }
-            
+
             int current_id = GetUser(Context.User.Id).getID();
             await (anon_channel).SendMessageAsync($"`{current_id}:` {text}");
         }
