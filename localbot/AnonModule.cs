@@ -11,12 +11,62 @@ namespace localbot
 {
     public class AnonModule : ModuleBase<SocketCommandContext>
     {
-        private static Random random = new Random();
-        private static Dictionary<ulong, int> anon_users = new Dictionary<ulong, int>();
-        private static List<ulong> blacklist = new List<ulong>();
-        private static SocketTextChannel anon_channel;
+        public const int maxID = 1000;
+        public const int historyLength = 5;
 
-        [Command("set_anon_channel")]
+        private class AnonUser
+        {
+            public ulong user { get; set; }
+            private Stack<int> ids;
+            public DateTime lastNewID { get; set; }
+
+            public AnonUser(ulong user)
+            {
+                this.user = user;
+                ids = new Stack<int>();
+            }
+
+            public int getID()
+            {
+                return ids.Peek();
+            }
+
+            public bool AliasAs(int id)
+            {
+                bool foundID = false;
+                Stack<int> temp = new Stack<int>();
+                while(ids.Count != 0)
+                {
+                    temp.Push(ids.Pop());
+                }
+                while (temp.Count != 0)
+                {
+                    int cur = temp.Pop();
+                    if (cur == id)
+                    {
+                        foundID = true;
+                    }
+                    ids.Push(cur);
+                }                
+                return foundID;
+            }
+
+            public void NewAlias(int alias)
+            {
+                ids.Push(alias);
+            }
+
+        }
+
+
+        private static Random random = new Random();
+        private static SocketTextChannel anon_channel;
+        private TimeSpan cooldown = new TimeSpan(0, 00, 10);
+
+        private static List<AnonUser> activeUsers = new List<AnonUser>();
+        private static List<AnonUser> blacklist = new List<AnonUser>();
+
+        [Command(">set_anon_channel")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task SetChannel()
         {
@@ -24,7 +74,7 @@ namespace localbot
             await ReplyAsync($"anon channel set");
         }
 
-        [Command("disable_anon_channel")]
+        [Command(">disable_anon_channel")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task DisableChannel()
         {
@@ -32,111 +82,216 @@ namespace localbot
             await ReplyAsync($"anon channel disabled");
         }
 
-        [Command("reset_anon")]
+        [Command(">reset_anon")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task ResetAnon()
         {
-            anon_users = new Dictionary<ulong, int>();
+            activeUsers = new List<AnonUser>();
             await ReplyAsync($"anon numbers reset");
         }
 
-        [Command("blacklist")]
+        [Command(">blacklist")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task Blacklist(int num)
         {
-            if (anon_users.ContainsValue(num))
+            foreach(AnonUser u in activeUsers)
             {
-                ulong user_to_be_blacklisted = 0;
-                foreach(ulong u in anon_users.Keys)
+                if(u.AliasAs(num))
                 {
-                    if (anon_users[u] == num)
-                        user_to_be_blacklisted = u;
-                }
-                if (!blacklist.Contains(user_to_be_blacklisted))
-                {
-                    blacklist.Add(user_to_be_blacklisted);
+                    AnonUser suspect = u;
+                    activeUsers.Remove(u);
+                    blacklist.Add(u);
                     await ReplyAsync($"user was blacklisted");
-                }
-                else
+                } else
                 {
-                    await ReplyAsync($"user was already blacklisted");
+                    await ReplyAsync($"user ID not found");
                 }
-            } else
-            {
-                await ReplyAsync($"id {num} no longer in use");
             }
-
         }
 
-        [Command("unblacklist")]
+        [Command(">unblacklist")]
         [RequireUserPermission(GuildPermission.Administrator)]
         public async Task UnBlacklist(IGuildUser user)
         {
-            if (blacklist.Contains(user.Id))
+            if (isBlacklisted(user.Id))
             {
-                blacklist.Remove(user.Id);
+                blacklist.Remove(GetBlUser(user.Id));
                 await ReplyAsync($"user unblacklisted");
             } else
             {
-                await ReplyAsync($"user was not blacklisted");
+                await ReplyAsync($"user was not blacklisted to begin with");
             }
 
         }
 
-        [Command("newid")]
+        [Command(">newid")]
         public async Task NewID([Remainder] int num)
         {
-            if (blacklist.Contains(Context.User.Id))
+            if (isBlacklisted(Context.User.Id))
             {
                 await (Context.User).SendMessageAsync($"you are blacklisted");
                 return;
             }
 
-            if (num > 1000 || num < 0)
+            if (GetUser(Context.User.Id) == null)
             {
-                await (Context.User).SendMessageAsync($"your id must be between 0 and 1000");
+                activeUsers.Add(new AnonUser(Context.User.Id));
+                GetUser(Context.User.Id).lastNewID = DateTime.Now;
+            } else if (DateTime.Now - GetUser(Context.User.Id).lastNewID < cooldown)
+            {
+                await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).ToString()}");
                 return;
-            }
-
-            foreach (int value in anon_users.Values)
-            {
-                if (num == value)
-                {
-                    await (Context.User).SendMessageAsync($"{num} is taken please generate a new ID");
-                    return;
-                }
-            }
-
-            if (anon_users.ContainsKey(Context.User.Id))
-            {
-                anon_users[Context.User.Id] = num;
-            } else
-            {
-                anon_users.Add(Context.User.Id, num);
             }
             
-            await (Context.User).SendMessageAsync($"you are now speaking under id: {num}");
+            if (activeUsers.Count / historyLength > maxID)
+            {
+                await (Context.User).SendMessageAsync($"all IDs are currently in use, contact your mods to reset IDs");
+                return;
+            }
+
+            if ((RecentlyUsed(num) || num < 0 || num > maxID))
+            {
+                await (Context.User).SendMessageAsync($"{num} is either taken or out of acceptable range");
+                return;
+            }
+            
+            GetUser(Context.User.Id).NewAlias(num);
+            GetUser(Context.User.Id).lastNewID = DateTime.Now;
+
+            await (Context.User).SendMessageAsync($"you are now speaking under id: '{num}'");
         }
 
-        [Command("anon")]
+        [Command(">newid")]
+        public async Task NewID()
+        {
+            if (isBlacklisted(Context.User.Id))
+            {
+                await (Context.User).SendMessageAsync($"you are blacklisted");
+                return;
+            }
+            if (GetUser(Context.User.Id) == null)
+            {
+                activeUsers.Add(new AnonUser(Context.User.Id));
+                GetUser(Context.User.Id).lastNewID = DateTime.Now;
+            } else if (DateTime.Now - GetUser(Context.User.Id).lastNewID < cooldown)
+            {
+                await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).ToString()}");
+                return;
+            }
+
+            if (activeUsers.Count / historyLength > maxID)
+            {
+                await (Context.User).SendMessageAsync($"all IDs are currently in use, contact your mods to reset IDs");
+                return;
+            }
+
+            int num = random.Next(maxID);
+            while(RecentlyUsed(num)) // yeah, yeah ree i don't predict max id capacity anytime soon
+            {
+                random.Next(maxID);
+            }
+            
+            GetUser(Context.User.Id).NewAlias(num);
+            GetUser(Context.User.Id).lastNewID = DateTime.Now;
+
+            await (Context.User).SendMessageAsync($"you are now speaking under id: '{num}'");
+        }
+
+        [Command(">anon")]
         public async Task Anon([Remainder] string text)
         {
-            if (blacklist.Contains(Context.User.Id))
+            if (isBlacklisted(Context.User.Id))
             {
                 await (Context.User).SendMessageAsync($"you are blacklisted");
                 return;
             }
 
-            if (!anon_users.ContainsKey(Context.User.Id))
+            if (!IsActiveUser(Context.User.Id))
             {
                 await (Context.User).SendMessageAsync("please generate an id with `newID`");
                 return;
             }
 
-            int current_id = anon_users[Context.User.Id];
+            int current_id = GetUser(Context.User.Id).getID();
             await (anon_channel).SendMessageAsync($"`{current_id}:` {text}");
         }
 
+        // To Implement: Check context to polish responses when commands executed in wrong context
+        private bool ContextCheck(SocketCommandContext current, String opt)
+        {
+            return true;            
+        }
+
+        private bool RecentlyUsed(int id)
+        {
+            foreach(AnonUser user in activeUsers)
+            {
+                if(user.AliasAs(id) == true)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private AnonUser GetUser(ulong user)
+        {
+            foreach(AnonUser u in activeUsers)
+            {
+                if (u.user == user)
+                {
+                    return u;
+                }
+            }
+            return null;
+        }
+        private AnonUser GetUser(int id)
+        {
+            foreach (AnonUser u in activeUsers)
+            {
+                if (u.getID() == id)
+                {
+                    return u;
+                }
+            }
+            return null;
+        }
+
+        private AnonUser GetBlUser(ulong user)
+        {
+            foreach (AnonUser u in blacklist)
+            {
+                if (u.user == user)
+                {
+                    return u;
+                }
+            }
+            return null;
+        }
+
+        private bool IsActiveUser(ulong user)
+        {
+            foreach (AnonUser u in activeUsers)
+            {
+                if (u.user == user)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private bool isBlacklisted(ulong user)
+        {
+            foreach(AnonUser u in blacklist)
+            {
+                if (u.user == user)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
     }
 }
