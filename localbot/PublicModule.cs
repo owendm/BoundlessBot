@@ -38,47 +38,6 @@ namespace localbot
                 "removes all _color roles from user"
                 );
         }
-
-        [Command("remove_color")]
-        public async Task RemoveColor()
-        {
-            foreach(IRole i in (Context.User as SocketGuildUser).Roles)
-            {
-                if (i.Name.Substring(0, 6) == "color_")
-                    await (Context.User as SocketGuildUser).RemoveRoleAsync(Context.Guild.GetRole(i.Id));
-            }
-        }
-
-  
-        [Command("set_color")]
-        public async Task SetColorAsync([Remainder] string color)
-        {
-            if (color.Length < 8)
-                return;
-            if (color.Substring(0, 6) != "color_")
-            {
-                color = "color_" + color;
-            }
-
-            foreach (IRole u in (Context.User as SocketGuildUser).Roles)
-            {
-                if (u.Name.Substring(0, 6) == "color_")
-                {
-                    await (Context.User as SocketGuildUser).RemoveRoleAsync(Context.Guild.GetRole(u.Id));
-                }
-            }
-
-            foreach(IRole i in Context.Guild.Roles)
-            {
-                if(i.Name == color)
-                {
-                    await (Context.User as SocketGuildUser).AddRoleAsync(Context.Guild.GetRole(i.Id));
-                    return;
-                }
-            }
-
-            await ReplyAsync($"Color {color} not found");
-        }
-
+        
     }
 }
