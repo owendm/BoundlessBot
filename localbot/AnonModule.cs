@@ -23,6 +23,7 @@ namespace localbot
             public anonUser(ulong user)
             {
                 this.user = user;
+                ids = new Stack<int>();
             }
 
             public int getID()
@@ -33,23 +34,20 @@ namespace localbot
             public bool AliasAs(int id)
             {
                 bool foundID = false;
-                for(int i = 0; i < ids.Count; i++)
+                Stack<int> temp = new Stack<int>();
+                while(ids.Count != 0)
                 {
-                    Stack<int> temp = new Stack<int>();
-                    while(ids.Count > 0)
-                    {
-                        temp.Push(ids.Pop());
-                    }
-                    while (temp.Count > 0)
-                    {
-                        int cur = temp.Pop();
-                        if (cur == id)
-                        {
-                            foundID = true;
-                        }
-                        ids.Push(cur);
-                    }
+                    temp.Push(ids.Pop());
                 }
+                while (temp.Count != 0)
+                {
+                    int cur = temp.Pop();
+                    if (cur == id)
+                    {
+                        foundID = true;
+                    }
+                    ids.Push(cur);
+                }                
                 return foundID;
             }
 
@@ -63,7 +61,7 @@ namespace localbot
 
         private static Random random = new Random();
         private static SocketTextChannel anon_channel;
-        private TimeSpan cooldown = new TimeSpan(0, 10, 0);
+        private TimeSpan cooldown = new TimeSpan(0, 00, 10);
 
         private static List<anonUser> activeUsers = new List<anonUser>();
         private static List<anonUser> blacklist = new List<anonUser>();
@@ -135,24 +133,30 @@ namespace localbot
                 return;
             }
 
-            if (DateTime.Now - GetUser(Context.User.Id).lastNewID < cooldown)
+            if (GetUser(Context.User.Id) == null)
             {
-                await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(DateTime.Now - GetUser(Context.User.Id).lastNewID).ToString()}");
+                activeUsers.Add(new anonUser(Context.User.Id));
+                GetUser(Context.User.Id).lastNewID = DateTime.Now;
+            } else if (DateTime.Now - GetUser(Context.User.Id).lastNewID < cooldown)
+            {
+                await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).ToString()}");
                 return;
             }
             
-            if (!(RecentlyUsed(num) && num > 0 && num < maxID + 1))
+            if (activeUsers.Count / historyLength > maxID)
+            {
+                await (Context.User).SendMessageAsync($"all IDs are currently in use, contact your mods to reset IDs");
+                return;
+            }
+
+            if ((RecentlyUsed(num) || num < 0 || num > maxID))
             {
                 await (Context.User).SendMessageAsync($"{num} is either taken or out of acceptable range");
                 return;
             }
-
-            if (GetUser(Context.User.Id) != null)
-            {
-                activeUsers.Add(new anonUser(Context.User.Id));
-                
-            }
+            
             GetUser(Context.User.Id).newAlias(num);
+            GetUser(Context.User.Id).lastNewID = DateTime.Now;
 
             await (Context.User).SendMessageAsync($"you are now speaking under id: {num}");
         }
@@ -165,24 +169,30 @@ namespace localbot
                 await (Context.User).SendMessageAsync($"you are blacklisted");
                 return;
             }
-
-            if (DateTime.Now - GetUser(Context.User.Id).lastNewID < cooldown)
+            if (GetUser(Context.User.Id) == null)
             {
-                await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(DateTime.Now - GetUser(Context.User.Id).lastNewID).ToString()}");
+                activeUsers.Add(new anonUser(Context.User.Id));
+                GetUser(Context.User.Id).lastNewID = DateTime.Now;
+            } else if (DateTime.Now - GetUser(Context.User.Id).lastNewID < cooldown)
+            {
+                await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).ToString()}");
+                return;
+            }
+
+            if (activeUsers.Count / historyLength > maxID)
+            {
+                await (Context.User).SendMessageAsync($"all IDs are currently in use, contact your mods to reset IDs");
                 return;
             }
 
             int num = random.Next(maxID);
-            while(RecentlyUsed(num)) // yeah yeah yeah fucking slaugheter me. i don't predict max id capacity anytime soon
+            while(RecentlyUsed(num)) // yeah, yeah ree i don't predict max id capacity anytime soon
             {
                 random.Next(maxID);
             }
-
-            if (GetUser(Context.User.Id) != null)
-            {
-                activeUsers.Add(new anonUser(Context.User.Id));
-            }
+            
             GetUser(Context.User.Id).newAlias(num);
+            GetUser(Context.User.Id).lastNewID = DateTime.Now;
 
             await (Context.User).SendMessageAsync($"you are now speaking under id: {num}");
         }
@@ -233,7 +243,7 @@ namespace localbot
         {
             foreach (anonUser u in activeUsers)
             {
-                if (u.ids.Peek() == id)
+                if (u.getID() == id)
                 {
                     return u;
                 }
