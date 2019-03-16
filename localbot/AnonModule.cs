@@ -33,22 +33,7 @@ namespace localbot
 
             public bool AliasAs(int id)
             {
-                bool foundID = false;
-                Stack<int> temp = new Stack<int>();
-                while(ids.Count != 0)
-                {
-                    temp.Push(ids.Pop());
-                }
-                while (temp.Count != 0)
-                {
-                    int cur = temp.Pop();
-                    if (cur == id)
-                    {
-                        foundID = true;
-                    }
-                    ids.Push(cur);
-                }                
-                return foundID;
+                return ids.Contains(id);
             }
 
             public void NewAlias(int alias)
