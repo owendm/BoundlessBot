@@ -16,14 +16,19 @@ namespace localbot
         // 
         // - [ ] fix so not all commands can be executed in any context
         // 
-        // - admin role that can be set instead of actual admin perms
+        // - [ ] admin role that can be set instead of actual admin perms
         //
-        // - command to set the history length and cooldown time for 
+        // - [ ] command to set the history length and cooldown time for 
         // newID and anonUser history respectivly
         // 
         // - [x] relationships channel and options
         //
         // - [x] boolean zen yeet this one's never gonna be done
+        // 
+        // - [x] fix issue with with AddALias which resulted in rolling new
+        // ids not doing anything
+        // 
+        // - [ ] perma blacklist (write to file)
         // 
 
         // Max ID number to be generated or chosen with >newID
