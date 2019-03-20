@@ -345,7 +345,7 @@ namespace localbot
             var u = activeUsers.Find(i => i.AliasAs(id) == true);
             return u != null;
         }
-
+        
         // Takes a unsigned long for the user's unique discord id
         // returns their AnonUser profile or null if it is not in
         // the current list of active users
