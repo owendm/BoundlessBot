@@ -12,29 +12,33 @@ namespace localbot
     public class AnonModule : ModuleBase<SocketCommandContext>
     {
         // TODO:
-        // - reduce redundancy of checks when executing commands
+        // - [x] reduce redundancy of checks when executing commands
         // 
-        // - fix so not all commands can be executed in any context
+        // - [ ] fix so not all commands can be executed in any context
         // 
         // - admin role that can be set instead of actual admin perms
         //
         // - command to set the history length and cooldown time for 
         // newID and anonUser history respectivly
+        // 
+        // - [x] relationships channel and options
+        //
+        // - [x] boolean zen yeet this one's never gonna be done
+        // 
 
         // Max ID number to be generated or chosen with >newID
-        public const int maxID = 1000;
         // Length of the history of IDs that each AnonUser records
         public const int historyLength = 5;
+        public const int maxID = 1000;
 
         private class AnonUser
         {
-            public ulong user;
-            private List<int> ids;
-            public DateTime lastNewID;
-            public bool blacklisted;
-
-            public bool timeout;
-            public DateTime timeoutEnd;
+            public ulong user; // Unique ID assigned by discord
+            private List<int> ids; // History of anon IDs this user has aliased as
+            public DateTime lastNewID; // Last time this user ran >newID
+            public bool blacklisted; // If this user is blacklisted
+            public bool timeout; // If this user is timed out
+            public DateTime timeoutEnd; // The time they are "back in"
 
             // Takes an unsigned long user and returns a AnonUser with 
             // user set to the user
@@ -59,19 +63,7 @@ namespace localbot
             // Returns true if this user is timed out
             public bool IsTimedout()
             {
-                if (timeout == false)
-                {
-                    return false;
-                } else
-                {
-                    if(timeoutEnd - DateTime.Now > new TimeSpan(0, 0, 0))
-                    {
-                        return true;
-                    } else
-                    {
-                        return false;
-                    }
-                }
+                return timeout != false ? timeoutEnd - DateTime.Now > new TimeSpan(0, 0, 0) : false;
             }
 
             // Returns true if this AnonUser has used int id as an
@@ -89,7 +81,7 @@ namespace localbot
                 {
                     ids.RemoveAt(ids.Count - 1);
                 }
-                ids.Add(alias);
+                ids.Insert(0, alias);
             }
 
         }
@@ -98,6 +90,9 @@ namespace localbot
 
         // This is the channel that anonymous messages are sent to
         private static SocketTextChannel anon_channel;
+
+        // This is the channel that relationships messages are sent to
+        private static SocketTextChannel rel_channel;
 
         // The ammount of time that users must wait before using newID again
         private TimeSpan cooldown = new TimeSpan(0, 00, 10);
@@ -109,7 +104,7 @@ namespace localbot
         // Can only be executed by administrators
         [Command(">set_anon_channel")]
         [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task SetChannel()
+        public async Task SetAnonChannel()
         {
             anon_channel = (Context.Channel as SocketTextChannel);
             await ReplyAsync($"anon channel set");
@@ -118,10 +113,29 @@ namespace localbot
         // Disables the anon channel
         [Command(">disable_anon_channel")]
         [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task DisableChannel()
+        public async Task DisableAnonChannel()
         {
             anon_channel = null;
             await ReplyAsync($"anon channel disabled");
+        }
+
+        // Designates the channel for rel messages to be sent to
+        // Can only be executed by administrators
+        [Command(">set_rel_channel")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task SetRelChannel()
+        {
+            rel_channel = (Context.Channel as SocketTextChannel);
+            await ReplyAsync($"relationships channel set");
+        }
+
+        // Disables the relationships channel
+        [Command(">disable_rel_channel")]
+        [RequireUserPermission(GuildPermission.Administrator)]
+        public async Task DisableRelChannel()
+        {
+            rel_channel = null;
+            await ReplyAsync($"relationships channel disabled");
         }
 
         // Resets the directory of AnonUsers, blacklist will be emptied
@@ -148,6 +162,7 @@ namespace localbot
                     return;
                 }
             }
+            return;
         }
 
         // Temporarily mutes a user's anon capabilities. Takes
@@ -163,26 +178,27 @@ namespace localbot
                 {
                     u.timeout = true;
                     u.timeoutEnd = DateTime.Now + new TimeSpan(0, minutes, 0);
-                    await ReplyAsync($"user {num} for {minutes} minutes");
+                    await ReplyAsync($"user {num} for {minutes} minute(s)");
                     return;
                 }
             }
+            return;
         }
 
         // Takes a discord user and removes them from the blacklist
         [Command(">unblacklist")]
         [RequireUserPermission(GuildPermission.Administrator)]
-        public async Task UnBlacklist([Remainder] IGuildUser user)
+        public async Task UnBlacklist(int num)
         {
-            if (GetUser(Context.User.Id).IsBlacklisted())
+            if (GetUser(num).IsBlacklisted())
             {
-                GetUser(Context.User.Id).blacklisted = false;
+                GetUser(num).blacklisted = false;
                 await ReplyAsync($"user unblacklisted");
             } else
             {
                 await ReplyAsync($"user was not blacklisted to begin with");
             }
-
+            return;
         }
 
         // Generates a newID for the anonUser who executes the command.
@@ -190,6 +206,7 @@ namespace localbot
         [Command(">newid")]
         public async Task NewID([Remainder] int num)
         {
+
             if (GetUser(Context.User.Id) == null) // Does the user have an AnonUser profile?
             {
                 activeUsers.Add(new AnonUser(Context.User.Id));
@@ -210,7 +227,6 @@ namespace localbot
                 await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).ToString()}");
                 return;
             }
-
             if ((RecentlyUsed(num) || num < 0 || num > maxID)) // Is this ID taken or out of bounds?
             {
                 await (Context.User).SendMessageAsync($"{num} is either taken or out of acceptable range");
@@ -221,33 +237,13 @@ namespace localbot
             GetUser(Context.User.Id).lastNewID = DateTime.Now;
 
             await (Context.User).SendMessageAsync($"you are now speaking under id: `{num}`");
+            return;
         }
 
         // Generates a newID for the anonUser who executes the command.
         [Command(">newid")]
         public async Task NewID()
         {
-            if (GetUser(Context.User.Id) == null) // Does the user have an AnonUser profile?
-            {
-                activeUsers.Add(new AnonUser(Context.User.Id));
-                GetUser(Context.User.Id).lastNewID = DateTime.Now - (cooldown * 2);
-            }
-            if (GetUser(Context.User.Id).IsBlacklisted()) // Is this profile blacklisted?
-            {
-                await (Context.User).SendMessageAsync($"you are blacklisted");
-                return;
-            }
-            if (GetUser(Context.User.Id).IsTimedout()) // Is this profile timed out?
-            {
-                await (Context.User).SendMessageAsync($"you are timed out");
-                return;
-            }
-            if (DateTime.Now - GetUser(Context.User.Id).lastNewID < cooldown) // Is newID on cooldown?
-            {
-                await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).ToString()}");
-                return;
-            }
-
             if (activeUsers.Count / historyLength > maxID) // Are all possible newIDs used up? (to avoid infinite loop)
             {
                 await (Context.User).SendMessageAsync($"all IDs are currently in use, contact your mods to reset IDs");
@@ -259,37 +255,25 @@ namespace localbot
             {
                 random.Next(maxID);
             }
-            
-            GetUser(Context.User.Id).NewAlias(num);
-            GetUser(Context.User.Id).lastNewID = DateTime.Now;
 
-            await (Context.User).SendMessageAsync($"you are now speaking under id: `{num}`");
+            await NewID(num);
+            return;
         }
 
         // Sends a message to the anonChannel from a user's perspective
         [Command(">anon")]
         public async Task Anon([Remainder] string text)
         {
+            await SendMessage(text, "anon");
+            return;
+        }
 
-            if (GetUser(Context.User.Id) == null) // Does the user have an AnonUser profile?
-            {
-                // TODO: Just have this generate an ID?
-                await (Context.User).SendMessageAsync("please generate an id with `newID`");
-                return;
-            }
-            if (GetUser(Context.User.Id).IsBlacklisted()) // Is this profile blacklisted?
-            {
-                await (Context.User).SendMessageAsync($"you are blacklisted");
-                return;
-            }
-            if (GetUser(Context.User.Id).IsTimedout()) // Is this profile timed out?
-            {
-                await (Context.User).SendMessageAsync($"you are timed out");
-                return;
-            }
-
-            int current_id = GetUser(Context.User.Id).getID();
-            await (anon_channel).SendMessageAsync($"`{current_id}:` {text}");
+        // Sends a message to the relChannel from a user's perspective
+        [Command(">relationships")]
+        public async Task Relationships([Remainder] string text)
+        {
+            await SendMessage(text, "relationships");
+            return;
         }
 
         // Messages another AnonUser
@@ -298,7 +282,15 @@ namespace localbot
         [Command(">message")]
         public async Task Message(int num, [Remainder] string text)
         {
+            await SendMessage(text, "message", num);
+            return;
+        }
 
+        // Takes int num (the sender's AnonID), string text (the context of the message), 
+        // string where ("anon", or "message") and optional parameter recipient id (used 
+        // for sending messages);
+        private async Task SendMessage(string text, string where, int recipient = 0)
+        {
             if (GetUser(Context.User.Id) == null) // Does the user have an AnonUser profile?
             {
                 await (Context.User).SendMessageAsync("please generate an id with `newID`");
@@ -316,22 +308,37 @@ namespace localbot
             }
 
             int current_id = GetUser(Context.User.Id).getID();
-            IGuildUser recipient = anon_channel.GetUser(GetUser(num).user);
-            await (recipient).SendMessageAsync($"`{current_id}:` {text}");
+
+            switch (where)
+            {
+                case "message":
+                    IGuildUser sentTo = anon_channel.GetUser(GetUser(recipient).user);
+                    await (sentTo).SendMessageAsync($"`{current_id}:` {text}");
+                    break;
+                case "anon":
+                    if (anon_channel != null)
+                    {
+                        await (anon_channel).SendMessageAsync($"`{current_id}:` {text}");
+                    }
+                    break;
+                case "relationships":
+                    if (rel_channel != null)
+                    {
+                        await (rel_channel).SendMessageAsync($"`{current_id}:` {text}");
+                    }
+                    break;
+                default:
+                    break;
+            }
+
         }
 
         // Takes an int id and returns if any AnonUsers
         // have used the id recently (with in the historyLength)
         private bool RecentlyUsed(int id)
         {
-            foreach(AnonUser user in activeUsers)
-            {
-                if(user.AliasAs(id) == true)
-                {
-                    return true;
-                }
-            }
-            return false;
+            var u = activeUsers.Find(i => i.AliasAs(id) == true);
+            return u != null;
         }
 
         // Takes a unsigned long for the user's unique discord id
@@ -339,29 +346,16 @@ namespace localbot
         // the current list of active users
         private AnonUser GetUser(ulong user)
         {
-            foreach(AnonUser u in activeUsers)
-            {
-                if (u.user == user)
-                {
-                    return u;
-                }
-            }
-            return null;
+            var u = activeUsers.Find(i => i.user == user);
+            return u;
         }
 
         // Takes the int id and returns the id of the current user of 
         // the id or null if nobody is using it
         private AnonUser GetUser(int id)
         {
-            foreach (AnonUser u in activeUsers)
-            {
-                if (u.getID() == id)
-                {
-                    return u;
-                }
-            }
-            return null;
+            var u = activeUsers.Find(i => i.getID() == id);
+            return u;
         }
-
     }
 }
