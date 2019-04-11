@@ -5,31 +5,15 @@ using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
 using Discord.WebSocket;
+using System.IO;
 using System;
 
 namespace localbot
 {
     public class AnonModule : ModuleBase<SocketCommandContext>
     {
-        // TODO:
-        // - [x] reduce redundancy of checks when executing commands
-        // 
-        // - [ ] fix so not all commands can be executed in any context
-        // 
-        // - [ ] admin role that can be set instead of actual admin perms
-        //
-        // - [ ] command to set the history length and cooldown time for 
-        // newID and anonUser history respectivly
-        // 
-        // - [x] relationships channel and options
-        //
-        // - [x] boolean zen yeet this one's never gonna be done
-        // 
-        // - [x] fix issue with with AddALias which resulted in rolling new
-        // ids not doing anything
-        // 
-        // - [ ] perma blacklist (write to file)
-        // 
+
+        private static String config = System.IO.File.ReadAllText(@"C:\Users\Owen\source\repos\localbot\localbot");
 
         // Max ID number to be generated or chosen with >newID
         // Length of the history of IDs that each AnonUser records
@@ -100,15 +84,24 @@ namespace localbot
         private static SocketTextChannel rel_channel;
 
         // The ammount of time that users must wait before using newID again
-        private TimeSpan cooldown = new TimeSpan(0, 00, 10);
+        private TimeSpan cooldown = new TimeSpan(0, 10, 00);
 
         // This list contains the current active users AnonUser
         private static List<AnonUser> activeUsers = new List<AnonUser>();
-        
+
+        // Changes the cooldown on newID
+        [Command(">newid_cooldown")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task cooldownChange([Remainder] int num)
+        {
+            cooldown = new TimeSpan(0, num, 0);
+            await ReplyAsync($"newID cooldown set to {num} minutes");
+        }
+
         // Designates the channel for anon messages to be sent to
         // Can only be executed by administrators
         [Command(">set_anon_channel")]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task SetAnonChannel()
         {
             anon_channel = (Context.Channel as SocketTextChannel);
@@ -117,7 +110,7 @@ namespace localbot
 
         // Disables the anon channel
         [Command(">disable_anon_channel")]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task DisableAnonChannel()
         {
             anon_channel = null;
@@ -127,7 +120,7 @@ namespace localbot
         // Designates the channel for rel messages to be sent to
         // Can only be executed by administrators
         [Command(">set_rel_channel")]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task SetRelChannel()
         {
             rel_channel = (Context.Channel as SocketTextChannel);
@@ -136,7 +129,7 @@ namespace localbot
 
         // Disables the relationships channel
         [Command(">disable_rel_channel")]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task DisableRelChannel()
         {
             rel_channel = null;
@@ -145,7 +138,7 @@ namespace localbot
 
         // Resets the directory of AnonUsers, blacklist will be emptied
         [Command(">reset_anon")]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task ResetAnon()
         {
             activeUsers = new List<AnonUser>();
@@ -155,7 +148,7 @@ namespace localbot
         // Blacklists a user using their ID
         // Checks their ID history so they can not "roll away"
         [Command(">blacklist")]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task Blacklist(int num)
         {
             foreach(AnonUser u in activeUsers)
@@ -174,7 +167,7 @@ namespace localbot
         // an anon id and the ammount of minutes they should be 
         // timed out for
         [Command(">timeout")]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task Timeout(int num, int minutes)
         {
             foreach (AnonUser u in activeUsers)
@@ -191,10 +184,16 @@ namespace localbot
         }
 
         // Takes a discord user and removes them from the blacklist
+        // Will also end a user's timeout
         [Command(">unblacklist")]
-        [RequireUserPermission(GuildPermission.Administrator)]
+        [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task UnBlacklist(int num)
         {
+            if(GetUser(num).IsTimedout())
+            {
+                GetUser(num).timeout = false;
+                GetUser(num).timeoutEnd = DateTime.Now;
+            }
             if (GetUser(num).IsBlacklisted())
             {
                 GetUser(num).blacklisted = false;
