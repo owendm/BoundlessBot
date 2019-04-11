@@ -19,6 +19,7 @@ namespace localbot
         // Max ID number to be generated or chosen with >newID
         // Length of the history of IDs that each AnonUser records
 
+        // NOTE: Config file in project for editing is not the file that is read, that is in a different place
         private static Config config = JsonConvert.DeserializeObject<Config>(System.IO.File.ReadAllText(@".\config.json"));
         private class Config {
             public int cooldown;
