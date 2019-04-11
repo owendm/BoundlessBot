@@ -17,7 +17,7 @@ namespace localbot
         // Length of the history of IDs that each AnonUser records
 
         // NOTE: Config file in project for editing is not the file that is read, that is in a different place
-        private static Config config = JsonConvert.DeserializeObject<Config>(System.IO.File.ReadAllText(@".\config.json"));
+        private static Config config = JsonConvert.DeserializeObject<Config>(System.IO.File.ReadAllText(@"./config.json"));
         private class Config {
             public int cooldown;
             public int hist_leng;
@@ -280,15 +280,15 @@ namespace localbot
             switch (where)
             {
                 case "message":
-                    IGuildUser sentTo = Context.Guild.GetUser(GetUser(recipient).user);
+                    IGuildUser sentTo = (IGuildUser) Context.Client.GetUser(GetUser(recipient).user);
                     await (sentTo).SendMessageAsync($"`{current_id}:` {text}");
                     break;
                 case "anon":
-                    await (Context.Guild.TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "anonymous"))
+                    await (Context.Client.GetGuild(557396013082607659).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "anonymous"))
                         .SendMessageAsync($"`{current_id}:` {text}");
                     break;
                 case "relationships":
-                    await (Context.Guild.TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "relationships"))
+                    await (Context.Client.GetGuild(557396013082607659).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "relationships"))
                         .SendMessageAsync($"`{current_id}:` {text}");
                     break;
                 default:
