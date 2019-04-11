@@ -6,6 +6,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Discord.WebSocket;
 using System.IO;
+using Newtonsoft.Json;
 using System;
 
 namespace localbot
@@ -13,12 +14,24 @@ namespace localbot
     public class AnonModule : ModuleBase<SocketCommandContext>
     {
 
-        private static String config = System.IO.File.ReadAllText(@"C:\Users\Owen\source\repos\localbot\localbot");
+
 
         // Max ID number to be generated or chosen with >newID
         // Length of the history of IDs that each AnonUser records
-        public const int historyLength = 5;
-        public const int maxID = 1000;
+
+        private static Config config = JsonConvert.DeserializeObject<Config>(System.IO.File.ReadAllText(@".\config.json"));
+        private class Config {
+            public int cooldown;
+            public int hist_leng;
+            public int max_id;
+        }
+
+        // The number of IDs that are tracked to a user's profile
+        public static int historyLength = config.hist_leng;
+        // The max number a user's ID can be
+        public static int maxID = config.max_id;
+        // The ammount of time that users must wait before using newID again
+        private TimeSpan cooldown = new TimeSpan(0, config.cooldown, 00);
 
         private class AnonUser
         {
@@ -77,15 +90,6 @@ namespace localbot
 
         private static Random random = new Random();
 
-        // This is the channel that anonymous messages are sent to
-        private static SocketTextChannel anon_channel;
-
-        // This is the channel that relationships messages are sent to
-        private static SocketTextChannel rel_channel;
-
-        // The ammount of time that users must wait before using newID again
-        private TimeSpan cooldown = new TimeSpan(0, 10, 00);
-
         // This list contains the current active users AnonUser
         private static List<AnonUser> activeUsers = new List<AnonUser>();
 
@@ -96,44 +100,6 @@ namespace localbot
         {
             cooldown = new TimeSpan(0, num, 0);
             await ReplyAsync($"newID cooldown set to {num} minutes");
-        }
-
-        // Designates the channel for anon messages to be sent to
-        // Can only be executed by administrators
-        [Command(">set_anon_channel")]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task SetAnonChannel()
-        {
-            anon_channel = (Context.Channel as SocketTextChannel);
-            await ReplyAsync($"anon channel set");
-        }
-
-        // Disables the anon channel
-        [Command(">disable_anon_channel")]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task DisableAnonChannel()
-        {
-            anon_channel = null;
-            await ReplyAsync($"anon channel disabled");
-        }
-
-        // Designates the channel for rel messages to be sent to
-        // Can only be executed by administrators
-        [Command(">set_rel_channel")]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task SetRelChannel()
-        {
-            rel_channel = (Context.Channel as SocketTextChannel);
-            await ReplyAsync($"relationships channel set");
-        }
-
-        // Disables the relationships channel
-        [Command(">disable_rel_channel")]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task DisableRelChannel()
-        {
-            rel_channel = null;
-            await ReplyAsync($"relationships channel disabled");
         }
 
         // Resets the directory of AnonUsers, blacklist will be emptied
@@ -316,20 +282,16 @@ namespace localbot
             switch (where)
             {
                 case "message":
-                    IGuildUser sentTo = anon_channel.GetUser(GetUser(recipient).user);
+                    IGuildUser sentTo = Context.Guild.GetUser(GetUser(recipient).user);
                     await (sentTo).SendMessageAsync($"`{current_id}:` {text}");
                     break;
                 case "anon":
-                    if (anon_channel != null)
-                    {
-                        await (anon_channel).SendMessageAsync($"`{current_id}:` {text}");
-                    }
+                    await (Context.Guild.TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "anonymous"))
+                        .SendMessageAsync($"`{current_id}:` {text}");
                     break;
                 case "relationships":
-                    if (rel_channel != null)
-                    {
-                        await (rel_channel).SendMessageAsync($"`{current_id}:` {text}");
-                    }
+                    await (Context.Guild.TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "relationships"))
+                        .SendMessageAsync($"`{current_id}:` {text}");
                     break;
                 default:
                     break;

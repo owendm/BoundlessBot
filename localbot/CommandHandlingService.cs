@@ -30,7 +30,7 @@ namespace localbot
         public async Task InitializeAsync()
         {
             Console.Write("INITIALIZED COMMAND ASYNC\n");
-            await _discord.SetGameAsync("'localhelp' for help");
+            await _discord.SetGameAsync("'>localhelp' for help");
             await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
         }
 
