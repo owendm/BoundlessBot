@@ -13,9 +13,6 @@ namespace localbot
 {
     public class AnonModule : ModuleBase<SocketCommandContext>
     {
-
-
-
         // Max ID number to be generated or chosen with >newID
         // Length of the history of IDs that each AnonUser records
 
