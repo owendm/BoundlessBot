@@ -101,7 +101,7 @@ namespace localbot
         [Command(">dox")]
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task doxUser([Remainder] int num) {
-            await ReplyAsync($"user {num} is {Context.Client.GetUser(_blacklist.First(x => x.Value == num).Key).Username}");
+            await ReplyAsync($"user `{num}` is {Context.Client.GetUser(_blacklist.First(x => x.Value == num).Key).Username}");
         }
 
         // Changes the cooldown on newID
