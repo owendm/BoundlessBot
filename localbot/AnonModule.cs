@@ -24,7 +24,8 @@ namespace localbot
             public int max_id;
         }
 
-        private static Dictionary<ulong, int> _blacklist = JsonConvert.DeserializeObject<Dictionary<ulong, int>>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\blacklist.txt"));
+        private static Dictionary<ulong, int> _blacklist = 
+            JsonConvert.DeserializeObject<Dictionary<ulong, int>>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\blacklist.txt"));
 
         // The number of IDs that are tracked to a user's profile
         public static int historyLength = _config.hist_leng;
@@ -95,6 +96,13 @@ namespace localbot
 
         // This list contains the current active users AnonUser
         private static List<AnonUser> activeUsers = new List<AnonUser>();
+
+        // Doxes an anon user (principly for moderation)
+        [Command(">dox")]
+        [RequireUserPermission(GuildPermission.KickMembers)]
+        public async Task doxUser([Remainder] int num) {
+            await ReplyAsync($"user {num} is {Context.Client.GetUser(_blacklist.First(x => x.Value == num).Key).Username}");
+        }
 
         // Changes the cooldown on newID
         [Command(">newid_cooldown")]
