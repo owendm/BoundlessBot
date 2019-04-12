@@ -12,7 +12,7 @@ namespace localbot
     class Program
     {
 
-        static string path = @"./secret.txt"; // put your own config w auth token
+        static string path = @"C:\Users\Owen\Desktop\config.txt"; // put your own config w auth token
         static string token = File.ReadAllText(path);
 
         public static void Main(string[] args)

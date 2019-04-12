@@ -280,8 +280,8 @@ namespace localbot
             switch (where)
             {
                 case "message":
-                    IGuildUser sentTo = (IGuildUser) Context.Client.GetUser(GetUser(recipient).user);
-                    await (sentTo).SendMessageAsync($"`{current_id}:` {text}");
+                    await (Context.Client.GetUser(GetUser(recipient).user))
+                        .SendMessageAsync($"`{current_id}:` {text}");
                     break;
                 case "anon":
                     await (Context.Client.GetGuild(557396013082607659).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "anonymous"))
