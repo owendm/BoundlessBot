@@ -17,26 +17,27 @@ namespace localbot
         // Length of the history of IDs that each AnonUser records
 
         // NOTE: Config file in project for editing is not the file that is read, that is in a different place
-        private static Config config = JsonConvert.DeserializeObject<Config>(System.IO.File.ReadAllText(@"./config.json"));
-        private class Config {
+        private static ConfigJSON _config = JsonConvert.DeserializeObject<ConfigJSON>(System.IO.File.ReadAllText(@"./config.json"));
+        private class ConfigJSON {
             public int cooldown;
             public int hist_leng;
             public int max_id;
         }
 
+        private static Dictionary<ulong, int> _blacklist = JsonConvert.DeserializeObject<Dictionary<ulong, int>>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\blacklist.txt"));
+
         // The number of IDs that are tracked to a user's profile
-        public static int historyLength = config.hist_leng;
+        public static int historyLength = _config.hist_leng;
         // The max number a user's ID can be
-        public static int maxID = config.max_id;
+        public static int maxID = _config.max_id;
         // The ammount of time that users must wait before using newID again
-        private TimeSpan cooldown = new TimeSpan(0, config.cooldown, 00);
+        private TimeSpan cooldown = new TimeSpan(0, _config.cooldown, 00);
 
         private class AnonUser
         {
             public ulong user; // Unique ID assigned by discord
             private List<int> ids; // History of anon IDs this user has aliased as
             public DateTime lastNewID; // Last time this user ran >newID
-            public bool blacklisted; // If this user is blacklisted
             public bool timeout; // If this user is timed out
             public DateTime timeoutEnd; // The time they are "back in"
 
@@ -57,7 +58,11 @@ namespace localbot
             // Returns true if this AnonUser is blacklisted
             public bool IsBlacklisted()
             {
-                return blacklisted;
+                if(JsonConvert.DeserializeObject<Dictionary<ulong, int>>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\blacklist.txt")) == null)
+                {
+                    _blacklist = new Dictionary<ulong, int>();
+                }
+                return _blacklist.ContainsKey(this.user);
             }
 
             // Returns true if this user is timed out
@@ -100,26 +105,23 @@ namespace localbot
             await ReplyAsync($"newID cooldown set to {num} minutes");
         }
 
-        // Resets the directory of AnonUsers, blacklist will be emptied
-        [Command(">reset_anon")]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task ResetAnon()
-        {
-            activeUsers = new List<AnonUser>();
-            await ReplyAsync($"anon numbers reset");
-        }
-
         // Blacklists a user using their ID
         // Checks their ID history so they can not "roll away"
         [Command(">blacklist")]
         [RequireUserPermission(GuildPermission.KickMembers)]
         public async Task Blacklist(int num)
         {
+            if(_blacklist == null)
+            {
+                _blacklist = new Dictionary<ulong, int>();
+            }
+
             foreach(AnonUser u in activeUsers)
             {
                 if(u.AliasAs(num))
                 {
-                    u.blacklisted = true;
+                    _blacklist.Add(u.user, num);
+                    System.IO.File.WriteAllText(@"C:\Users\Owen\Desktop\blacklist.txt", JsonConvert.SerializeObject(_blacklist));
                     await ReplyAsync($"user {num} was blacklisted");
                     return;
                 }
@@ -160,7 +162,7 @@ namespace localbot
             }
             if (GetUser(num).IsBlacklisted())
             {
-                GetUser(num).blacklisted = false;
+                _blacklist.Remove(GetUser(num).user);
                 await ReplyAsync($"user unblacklisted");
             } else
             {
