@@ -13,8 +13,6 @@ namespace localbot
 {
     public class AnonModule : ModuleBase<SocketCommandContext>
     {
-        // Max ID number to be generated or chosen with >newID
-        // Length of the history of IDs that each AnonUser records
 
         // NOTE: Config file in project for editing is not the file that is read, that is in a different place
         private static ConfigJSON _config = JsonConvert.DeserializeObject<ConfigJSON>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\config.txt"));
