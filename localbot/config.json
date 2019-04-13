@@ -1,5 +1,6 @@
 ﻿{
 	"cooldown": 1,
 	"hist_leng": 5,
-	"max_id":  1000
+	"max_id": 1000,
+	""
 }
