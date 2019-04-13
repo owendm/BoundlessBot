@@ -17,19 +17,27 @@ namespace localbot
         // Length of the history of IDs that each AnonUser records
 
         // NOTE: Config file in project for editing is not the file that is read, that is in a different place
-        private static Dictionary<string, float> _config = JsonConvert.DeserializeObject<Dictionary<string, float>>(System.IO.File.ReadAllText(@"./config.json"));
+        private static ConfigJSON _config = JsonConvert.DeserializeObject<ConfigJSON>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\config.txt"));
+        private class ConfigJSON
+        {
+            public int cooldown;
+            public int hist_leng;
+            public int max_id;
+            public ulong server_id;
+        }
+
 
         private static Dictionary<ulong, int> _blacklist = 
             JsonConvert.DeserializeObject<Dictionary<ulong, int>>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\blacklist.txt"));
 
         // The number of IDs that are tracked to a user's profile
-        public static int historyLength = (int) _config["cooldown"];
+        public static int historyLength = (int) _config.hist_leng;
         // The max number a user's ID can be
-        public static int maxID = (int) _config["max_id"];
+        public static int maxID = (int) _config.max_id;
         // The ammount of time that users must wait before using newID again
-        private TimeSpan cooldown = new TimeSpan(0, (int) _config["hist_length"], 00);
+        private TimeSpan cooldown = new TimeSpan(0, (int) _config.cooldown, 00);
         // The Server ID that this instance is talkin to
-        private ulong serverID = (ulong) _config["server_id"];
+        private ulong serverID = (ulong) _config.server_id;
 
         private class AnonUser
         {
@@ -266,6 +274,9 @@ namespace localbot
         // for sending messages);
         private async Task SendMessage(string text, string where, int recipient = 0)
         {
+            text = text.Replace("@everyone", "@\u200beveryone");
+            text = text.Replace("@here", "@\u200bhere");
+
             if (GetUser(Context.User.Id) == null) // Does the user have an AnonUser profile?
             {
                 await (Context.User).SendMessageAsync("please generate an id with `newID`");
