@@ -64,7 +64,7 @@ namespace localbot
             // Returns true if this AnonUser is blacklisted
             public bool IsBlacklisted()
             {
-                if(JsonConvert.DeserializeObject<Dictionary<ulong, int>>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\blacklist.txt")) == null)
+                if(_blacklist == null)
                 {
                     _blacklist = new Dictionary<ulong, int>();
                 }
@@ -156,6 +156,7 @@ namespace localbot
                 {
                     u.timeout = true;
                     u.timeoutEnd = DateTime.Now + new TimeSpan(0, minutes, 0);
+                    u.NewAlias(num);
                     await ReplyAsync($"user {num} for {minutes} minute(s)");
                     return;
                 }
