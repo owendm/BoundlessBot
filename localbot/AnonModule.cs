@@ -135,7 +135,8 @@ namespace localbot
                 {
                     _blacklist.Add(u.user, num);
                     System.IO.File.WriteAllText(@"C:\Users\Owen\Desktop\blacklist.txt", JsonConvert.SerializeObject(_blacklist));
-                    await ReplyAsync($"user {num} was blacklisted");
+                    u.NewAlias(num);
+                    await ReplyAsync($"user {num} was blacklisted.");
                     return;
                 }
             }
