@@ -54,7 +54,7 @@ namespace localbot
             if (result.IsSuccess)
                 return;
 
-            await context.Channel.SendMessageAsync($"");
+            await context.Channel.SendMessageAsync($"command did not process, use `>help` for instructions");
         }
     }
 }

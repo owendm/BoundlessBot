@@ -25,7 +25,6 @@ namespace localbot
             public ulong server_id;
         }
 
-
         private static Dictionary<ulong, int> _blacklist = 
             JsonConvert.DeserializeObject<Dictionary<ulong, int>>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\blacklist.txt"));
 
@@ -38,75 +37,17 @@ namespace localbot
         // The Server ID that this instance is talkin to
         private ulong serverID = (ulong) _config.server_id;
 
-        private class AnonUser
-        {
-            public ulong user; // Unique ID assigned by discord
-            private List<int> ids; // History of anon IDs this user has aliased as
-            public DateTime lastNewID; // Last time this user ran >newID
-            public bool timeout; // If this user is timed out
-            public DateTime timeoutEnd; // The time they are "back in"
-
-            // Takes an unsigned long user and returns a AnonUser with 
-            // user set to the user
-            public AnonUser(ulong user)
-            {
-                this.user = user;
-                ids = new List<int>();
-            }
-
-            // Returns the current ID number that the AnonUser has set
-            public int getID()
-            {
-                return ids[0];
-            }
-
-            // Returns true if this AnonUser is blacklisted
-            public bool IsBlacklisted()
-            {
-                if(_blacklist == null)
-                {
-                    _blacklist = new Dictionary<ulong, int>();
-                }
-                return _blacklist.ContainsKey(this.user);
-            }
-
-            // Returns true if this user is timed out
-            public bool IsTimedout()
-            {
-                return timeout != false ? timeoutEnd - DateTime.Now > new TimeSpan(0, 0, 0) : false;
-            }
-
-            // Returns true if this AnonUser has used int id as an
-            // id in historyLength ids
-            public bool AliasAs(int id)
-            {
-                return ids.Contains(id);
-            }
-
-            // Changes the active ID for this AnonUser and pushes the
-            // old ids to the history
-            public void NewAlias(int alias)
-            {
-                if (ids.Count > historyLength)
-                {
-                    ids.RemoveAt(ids.Count - 1);
-                }
-                ids.Insert(0, alias);
-            }
-
-        }
-
         private static Random random = new Random();
 
         // This list contains the current active users AnonUser
         private static List<AnonUser> activeUsers = new List<AnonUser>();
 
         // Doxes an anon user (principly for moderation)
-        [Command(">dox")]
-        [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task doxUser(int num) {
-            await ReplyAsync($"user `{num}` is {Context.Client.GetUser(_blacklist.First(x => x.Value == num).Key).Username}");
-        }
+        // [Command(">dox")]
+        // [RequireUserPermission(GuildPermission.KickMembers)]
+        // public async Task doxUser(int num) {
+        //     await ReplyAsync($"user `{num}` is {Context.Client.GetUser(_blacklist.First(x => x.Value == num).Key).Username}");
+        // }
 
         // Changes the cooldown on newID
         [Command(">newid_cooldown")]
@@ -205,12 +146,14 @@ namespace localbot
             }
             if (cur_user.IsTimedout()) // Is this profile timed out?
             {
-                await (Context.User).SendMessageAsync($"you are timed out");
+                await (Context.User).SendMessageAsync($"you are timed out, wait {((GetUser(Context.User.Id).timeoutEnd) - DateTime.Now).Minutes} minutes and " +
+                    $"{((GetUser(Context.User.Id).timeoutEnd) - DateTime.Now).Seconds}");
                 return;
             }
             if (DateTime.Now - cur_user.lastNewID < cooldown) // Is newID on cooldown?
             {
-                await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).ToString()}");
+                await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).Minutes} minutes and " +
+                    $"{(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).Seconds}");
                 return;
             }
             if ((RecentlyUsed(num) || num < 0 || num > maxID)) // Is this ID taken or out of bounds?
@@ -255,7 +198,7 @@ namespace localbot
         }
 
         // Sends a message to the relChannel from a user's perspective
-        [Command(">relationships")]
+        [Command(">rel")]
         public async Task Relationships([Remainder] string text)
         {
             await SendMessage(text, "relationships");
@@ -277,11 +220,27 @@ namespace localbot
         // for sending messages);
         private async Task SendMessage(string text, string where, int recipient = 0)
         {
+            if (_blacklist == null)
+            {
+                _blacklist = new Dictionary<ulong, int>();
+            }
 
             if (GetUser(Context.User.Id) == null) // Does the user have an AnonUser profile?
             {
-                await (Context.User).SendMessageAsync("please generate an id with `newID`");
-                return;
+                if (!_blacklist.ContainsKey(Context.User.Id))
+                {
+                    int num = random.Next(maxID);
+                    while (RecentlyUsed(num)) // This should in theory never infinitly loop because of the previous check
+                    {
+                        random.Next(maxID);
+                    }
+                    activeUsers.Add(new AnonUser(Context.User.Id));
+                    GetUser(Context.User.Id).NewAlias(num);
+                } else
+                {
+                    await (Context.User).SendMessageAsync($"you are blacklisted");
+                    return;
+                }
             }
             if (GetUser(Context.User.Id).IsBlacklisted()) // Is this profile blacklisted?
             {
@@ -298,10 +257,10 @@ namespace localbot
 
             text = text.Replace("@everyone", "@\u200beveryone");
             text = text.Replace("@here", "@\u200bhere");
-            
-            if(text.Length > 1999)
+
+            if (text.Length + 3 + current_id.ToString().Length > 2000)
             {
-                text = text.Substring(0, 1999);
+                text = text.Substring(0, 2000 - (3 + current_id.ToString().Length));
             }
 
             // Keeping this here incase we decide to switch to embeds
@@ -354,6 +313,64 @@ namespace localbot
         {
             var u = activeUsers.Find(i => i.getID() == id);
             return u;
+        }
+
+        private class AnonUser
+        {
+            public ulong user; // Unique ID assigned by discord
+            private List<int> ids; // History of anon IDs this user has aliased as
+            public DateTime lastNewID; // Last time this user ran >newID
+            public bool timeout; // If this user is timed out
+            public DateTime timeoutEnd; // The time they are "back in"
+
+            // Takes an unsigned long user and returns a AnonUser with 
+            // user set to the user
+            public AnonUser(ulong user)
+            {
+                this.user = user;
+                ids = new List<int>();
+            }
+
+            // Returns the current ID number that the AnonUser has set
+            public int getID()
+            {
+                return ids[0];
+            }
+
+            // Returns true if this AnonUser is blacklisted
+            public bool IsBlacklisted()
+            {
+                if (_blacklist == null)
+                {
+                    _blacklist = new Dictionary<ulong, int>();
+                }
+                return _blacklist.ContainsKey(this.user);
+            }
+
+            // Returns true if this user is timed out
+            public bool IsTimedout()
+            {
+                return timeout != false ? timeoutEnd - DateTime.Now > new TimeSpan(0, 0, 0) : false;
+            }
+
+            // Returns true if this AnonUser has used int id as an
+            // id in historyLength ids
+            public bool AliasAs(int id)
+            {
+                return ids.Contains(id);
+            }
+
+            // Changes the active ID for this AnonUser and pushes the
+            // old ids to the history
+            public void NewAlias(int alias)
+            {
+                if (ids.Count > historyLength)
+                {
+                    ids.RemoveAt(ids.Count - 1);
+                }
+                ids.Insert(0, alias);
+            }
+
         }
     }
 }
