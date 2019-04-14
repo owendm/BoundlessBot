@@ -13,6 +13,7 @@ namespace localbot
 {
     public class AnonModule : ModuleBase<SocketCommandContext>
     {
+        // thanks for review:)
 
         // NOTE: Config file in project for editing is not the file that is read, that is in a different place
         private static ConfigJSON _config = 
