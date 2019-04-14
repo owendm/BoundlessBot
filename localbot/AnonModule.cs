@@ -165,6 +165,9 @@ namespace localbot
             cur_user.NewAlias(num);
             cur_user.lastNewID = DateTime.Now;
 
+            Color newColor = new Color(random.Next(255), random.Next(255), random.Next(255));
+            cur_user.message_color = newColor;
+
             await (Context.User).SendMessageAsync($"you are now speaking under id: `{num}`");
             return;
         }
@@ -269,6 +272,7 @@ namespace localbot
                 Title = current_id.ToString(),
                 Description = text
             };
+            message.Color = GetUser(Context.User.Id).message_color;
 
             switch (where)
             {
@@ -278,7 +282,7 @@ namespace localbot
                     break;
                 case "anon":
                     await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "anonymous"))
-                        .SendMessageAsync($"`{current_id}` {text}");
+                        .SendMessageAsync(embed: message.Build());
                     break;
                 case "relationships":
                     await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "relationships"))
@@ -319,6 +323,7 @@ namespace localbot
             public DateTime lastNewID; // Last time this user ran >newID
             public bool timeout; // If this user is timed out
             public DateTime timeoutEnd; // The time they are "back in"
+            public Color message_color;
 
             // Takes an unsigned long user and returns a AnonUser with 
             // user set to the user
