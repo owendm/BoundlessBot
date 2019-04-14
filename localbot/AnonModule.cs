@@ -177,6 +177,7 @@ namespace localbot
             if (GetUser(num).IsBlacklisted())
             {
                 _blacklist.Remove(GetUser(num).user);
+                System.IO.File.WriteAllText(@"C:\Users\Owen\Desktop\blacklist.txt", JsonConvert.SerializeObject(_blacklist));
                 await ReplyAsync($"user unblacklisted");
             } else
             {
