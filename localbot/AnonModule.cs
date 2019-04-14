@@ -294,8 +294,7 @@ namespace localbot
         // have used the id recently (with in the historyLength)
         private bool RecentlyUsed(int id)
         {
-            var u = activeUsers.Find(i => i.AliasAs(id) == true);
-            return u != null;
+            return activeUsers.Find(i => i.AliasAs(id) == true) != null;
         }
         
         // Takes a unsigned long for the user's unique discord id
@@ -303,16 +302,14 @@ namespace localbot
         // the current list of active users
         private AnonUser GetUser(ulong user)
         {
-            var u = activeUsers.Find(i => i.user == user);
-            return u;
+            return activeUsers.Find(i => i.user == user);
         }
 
         // Takes the int id and returns the id of the current user of 
         // the id or null if nobody is using it
         private AnonUser GetUser(int id)
         {
-            var u = activeUsers.Find(i => i.getID() == id);
-            return u;
+            return activeUsers.Find(i => i.getID() == id);
         }
 
         private class AnonUser
