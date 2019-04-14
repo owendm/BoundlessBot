@@ -15,7 +15,8 @@ namespace localbot
     {
 
         // NOTE: Config file in project for editing is not the file that is read, that is in a different place
-        private static ConfigJSON _config = JsonConvert.DeserializeObject<ConfigJSON>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\config.txt"));
+        private static ConfigJSON _config = 
+            JsonConvert.DeserializeObject<ConfigJSON>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\config.txt"));
         private class ConfigJSON
         {
             public int cooldown;
@@ -189,23 +190,24 @@ namespace localbot
         [Command(">newid")]
         public async Task NewID([Remainder] int num)
         {
-
+            AnonUser cur_user;
             if (GetUser(Context.User.Id) == null) // Does the user have an AnonUser profile?
             {
                 activeUsers.Add(new AnonUser(Context.User.Id));
                 GetUser(Context.User.Id).lastNewID = DateTime.Now - (cooldown * 2);
             }
-            if (GetUser(Context.User.Id).IsBlacklisted()) // Is this profile blacklisted?
+            cur_user = GetUser(Context.User.Id);
+            if (cur_user.IsBlacklisted()) // Is this profile blacklisted?
             {
                 await (Context.User).SendMessageAsync($"you are blacklisted");
                 return;
             }
-            if (GetUser(Context.User.Id).IsTimedout()) // Is this profile timed out?
+            if (cur_user.IsTimedout()) // Is this profile timed out?
             {
                 await (Context.User).SendMessageAsync($"you are timed out");
                 return;
             }
-            if (DateTime.Now - GetUser(Context.User.Id).lastNewID < cooldown) // Is newID on cooldown?
+            if (DateTime.Now - cur_user.lastNewID < cooldown) // Is newID on cooldown?
             {
                 await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).ToString()}");
                 return;
@@ -215,9 +217,9 @@ namespace localbot
                 await (Context.User).SendMessageAsync($"{num} is either taken or out of acceptable range");
                 return;
             }
-            
-            GetUser(Context.User.Id).NewAlias(num);
-            GetUser(Context.User.Id).lastNewID = DateTime.Now;
+
+            cur_user.NewAlias(num);
+            cur_user.lastNewID = DateTime.Now;
 
             await (Context.User).SendMessageAsync($"you are now speaking under id: `{num}`");
             return;
@@ -274,8 +276,6 @@ namespace localbot
         // for sending messages);
         private async Task SendMessage(string text, string where, int recipient = 0)
         {
-            text = text.Replace("@everyone", "@\u200beveryone");
-            text = text.Replace("@here", "@\u200bhere");
 
             if (GetUser(Context.User.Id) == null) // Does the user have an AnonUser profile?
             {
@@ -294,6 +294,16 @@ namespace localbot
             }
 
             int current_id = GetUser(Context.User.Id).getID();
+
+            text = text.Replace("@everyone", "@\u200beveryone");
+            text = text.Replace("@here", "@\u200bhere");
+
+            // Keeping this here incase we decide to switch to embeds
+            var message = new EmbedBuilder
+            {
+                Title = current_id.ToString(),
+                Description = text
+            };
 
             switch (where)
             {
