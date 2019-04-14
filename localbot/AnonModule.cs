@@ -104,7 +104,7 @@ namespace localbot
         // Doxes an anon user (principly for moderation)
         [Command(">dox")]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task doxUser([Remainder] int num) {
+        public async Task doxUser(int num) {
             await ReplyAsync($"user `{num}` is {Context.Client.GetUser(_blacklist.First(x => x.Value == num).Key).Username}");
         }
 
@@ -298,6 +298,11 @@ namespace localbot
 
             text = text.Replace("@everyone", "@\u200beveryone");
             text = text.Replace("@here", "@\u200bhere");
+            
+            if(text.Length > 1999)
+            {
+                text = text.Substring(0, 1999);
+            }
 
             // Keeping this here incase we decide to switch to embeds
             var message = new EmbedBuilder
@@ -310,15 +315,15 @@ namespace localbot
             {
                 case "message":
                     await (Context.Client.GetUser(GetUser(recipient).user))
-                        .SendMessageAsync($"`{current_id}:` {text}");
+                        .SendMessageAsync($"`{current_id}` {text}");
                     break;
                 case "anon":
                     await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "anonymous"))
-                        .SendMessageAsync($"`{current_id}:` {text}");
+                        .SendMessageAsync($"`{current_id}` {text}");
                     break;
                 case "relationships":
                     await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "relationships"))
-                        .SendMessageAsync($"`{current_id}:` {text}");
+                        .SendMessageAsync($"`{current_id}` {text}");
                     break;
                 default:
                     break;

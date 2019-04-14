@@ -13,7 +13,7 @@ namespace localbot
     public class PublicModule : ModuleBase<SocketCommandContext>
     {
 
-        [Command(">localhelp")]
+        [Command(">help")]
         public async Task LocalHelp()
         {
             var helpEmbed = new EmbedBuilder
