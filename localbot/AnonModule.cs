@@ -8,6 +8,7 @@ using Discord.WebSocket;
 using System.IO;
 using Newtonsoft.Json;
 using System;
+using Discord.Rest;
 
 namespace localbot
 {
@@ -76,6 +77,7 @@ namespace localbot
                     _blacklist.Add(u.user, num);
                     System.IO.File.WriteAllText(@"C:\Users\Owen\Desktop\blacklist.txt", JsonConvert.SerializeObject(_blacklist));
                     u.NewAlias(num);
+                    await Context.Client.GetUser(GetUser(num).user).SendMessageAsync($"you are not blacklisted");
                     await ReplyAsync($"user {num} was blacklisted.");
                     return;
                 }
@@ -97,6 +99,7 @@ namespace localbot
                     u.timeout = true;
                     u.timeoutEnd = DateTime.Now + new TimeSpan(0, minutes, 0);
                     u.NewAlias(num);
+                    await Context.Client.GetUser(GetUser(num).user).SendMessageAsync($"you have been timed out for {minutes} minutes");
                     await ReplyAsync($"user {num} for {minutes} minute(s)");
                     return;
                 }
@@ -147,13 +150,13 @@ namespace localbot
             if (cur_user.IsTimedout()) // Is this profile timed out?
             {
                 await (Context.User).SendMessageAsync($"you are timed out, wait {((GetUser(Context.User.Id).timeoutEnd) - DateTime.Now).Minutes} minutes and " +
-                    $"{((GetUser(Context.User.Id).timeoutEnd) - DateTime.Now).Seconds}");
+                    $"{((GetUser(Context.User.Id).timeoutEnd) - DateTime.Now).Seconds} seconds");
                 return;
             }
             if (DateTime.Now - cur_user.lastNewID < cooldown) // Is newID on cooldown?
             {
                 await (Context.User).SendMessageAsync($"newID is on cooldown, wait {(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).Minutes} minutes and " +
-                    $"{(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).Seconds}");
+                    $"{(cooldown - (DateTime.Now - GetUser(Context.User.Id).lastNewID)).Seconds} seconds");
                 return;
             }
             if ((RecentlyUsed(num) || num < 0 || num > maxID)) // Is this ID taken or out of bounds?
@@ -239,6 +242,9 @@ namespace localbot
                     }
                     activeUsers.Add(new AnonUser(Context.User.Id));
                     GetUser(Context.User.Id).NewAlias(num);
+                    Color newColor = new Color(random.Next(255), random.Next(255), random.Next(255));
+                    GetUser(Context.User.Id).message_color = newColor;
+                    await (Context.User).SendMessageAsync($"you are now speaking under id: `{num}`");
                 } else
                 {
                     await (Context.User).SendMessageAsync($"you are blacklisted");
@@ -278,7 +284,7 @@ namespace localbot
             {
                 case "message":
                     await (Context.Client.GetUser(GetUser(recipient).user))
-                        .SendMessageAsync($"`{current_id}` {text}");
+                        .SendMessageAsync(embed: message.Build());
                     break;
                 case "anon":
                     await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "anonymous"))
@@ -286,7 +292,7 @@ namespace localbot
                     break;
                 case "relationships":
                     await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "relationships"))
-                        .SendMessageAsync($"`{current_id}` {text}");
+                        .SendMessageAsync(embed: message.Build());
                     break;
                 default:
                     break;
