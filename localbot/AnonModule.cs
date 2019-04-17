@@ -17,7 +17,7 @@ namespace localbot
 
         // NOTE: Config file in project for editing is not the file that is read, that is in a different place
         private static ConfigJSON _config = 
-            JsonConvert.DeserializeObject<ConfigJSON>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\config.txt"));
+            JsonConvert.DeserializeObject<ConfigJSON>(System.IO.File.ReadAllText(@"./config.txt"));
         private class ConfigJSON
         {
             public int cooldown;
@@ -27,16 +27,16 @@ namespace localbot
         }
 
         private static Dictionary<ulong, int> _blacklist = 
-            JsonConvert.DeserializeObject<Dictionary<ulong, int>>(System.IO.File.ReadAllText(@"C:\Users\Owen\Desktop\blacklist.txt"));
+            JsonConvert.DeserializeObject<Dictionary<ulong, int>>(System.IO.File.ReadAllText(@"./blacklist.txt"));
 
         // The number of IDs that are tracked to a user's profile
         public static int historyLength = (int) _config.hist_leng;
         // The max number a user's ID can be
         public static int maxID = (int) _config.max_id;
         // The ammount of time that users must wait before using newID again
-        private TimeSpan cooldown = new TimeSpan(0, (int) _config.cooldown, 00);
+        private static TimeSpan cooldown = new TimeSpan(0, (int) _config.cooldown, 00);
         // The Server ID that this instance is talkin to
-        private ulong serverID = (ulong) _config.server_id;
+        private static ulong serverID = (ulong) _config.server_id;
 
         private static Random random = new Random();
 
@@ -75,7 +75,7 @@ namespace localbot
                 if(u.AliasAs(num))
                 {
                     _blacklist.Add(u.user, num);
-                    System.IO.File.WriteAllText(@"C:\Users\Owen\Desktop\blacklist.txt", JsonConvert.SerializeObject(_blacklist));
+                    System.IO.File.WriteAllText(@"./blacklist.txt", JsonConvert.SerializeObject(_blacklist));
                     u.NewAlias(num);
                     await Context.Client.GetUser(GetUser(num).user).SendMessageAsync($"you are not blacklisted");
                     await ReplyAsync($"user {num} was blacklisted.");
@@ -121,7 +121,7 @@ namespace localbot
             if (GetUser(num).IsBlacklisted())
             {
                 _blacklist.Remove(GetUser(num).user);
-                System.IO.File.WriteAllText(@"C:\Users\Owen\Desktop\blacklist.txt", JsonConvert.SerializeObject(_blacklist));
+                System.IO.File.WriteAllText(@"./blacklist.txt", JsonConvert.SerializeObject(_blacklist));
                 await ReplyAsync($"user unblacklisted");
             } else
             {
@@ -211,6 +211,14 @@ namespace localbot
             return;
         }
 
+        // Sends a message to the seriousChannel from a user's perspective
+        [Command(">serious")]
+        public async Task Serious([Remainder] string text)
+        {
+            await SendMessage(text, "serious");
+            return;
+        }
+
         // Messages another AnonUser
         // Takes the id number of the user to message and the text you
         // want to send to them
@@ -273,11 +281,18 @@ namespace localbot
             }
 
             // Keeping this here incase we decide to switch to embeds
-            var message = new EmbedBuilder
+            var message = new EmbedBuilder{};
+
+            if (text.Length < 20)
             {
-                Title = current_id.ToString(),
-                Description = text
-            };
+                message.Title = $"{current_id}: {text}";
+            } else
+            {
+                message.Title = current_id.ToString();
+                message.Description = text;
+            }
+
+
             message.Color = GetUser(Context.User.Id).message_color;
 
             switch (where)
@@ -292,6 +307,10 @@ namespace localbot
                     break;
                 case "relationships":
                     await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "relationships"))
+                        .SendMessageAsync(embed: message.Build());
+                    break;
+                case "serious":
+                    await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "serious"))
                         .SendMessageAsync(embed: message.Build());
                     break;
                 default:

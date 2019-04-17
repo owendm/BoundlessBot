@@ -12,7 +12,7 @@ namespace localbot
     class Program
     {
 
-        static string path = @"C:\Users\Owen\Desktop\token.txt"; // put your own config w auth token
+        static string path = @"./token.txt"; // put your own config w auth token
         static string token = File.ReadAllText(path);
 
         public static void Main(string[] args)
@@ -23,10 +23,8 @@ namespace localbot
             using (var services = ConfigureServices())
             {
                 var client = services.GetRequiredService<DiscordSocketClient>();
-
                 client.Log += LogAsync;
                 services.GetRequiredService<CommandService>().Log += LogAsync;
-
                 await client.LoginAsync(TokenType.Bot, token);
                 await client.StartAsync();
 
