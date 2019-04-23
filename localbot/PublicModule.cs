@@ -19,7 +19,7 @@ namespace localbot
             var helpEmbed = new EmbedBuilder
             {
                 Title = "Commands:",
-                Color = Color.Blue
+                Color = Color.Red
             };
             helpEmbed.AddField(">newid <id>", "generate or manually select an id");
             helpEmbed.AddField(">message <id>", "send a message to another anon user under your current id");
@@ -30,6 +30,12 @@ namespace localbot
             helpEmbed.AddField(">unblacklist <id>", "[requires kick permissions] remove a user from the blacklist and or clear any timeout they have incured");
 
             await Context.User.SendMessageAsync(embed: helpEmbed.Build());
+        }
+
+        [Command(">ping")]
+        public async Task Ping()
+        {
+            await ReplyAsync("pong");
         }
         
     }
