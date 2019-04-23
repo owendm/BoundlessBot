@@ -77,7 +77,7 @@ namespace localbot
                     _blacklist.Add(u.user, num);
                     System.IO.File.WriteAllText(@"./blacklist.txt", JsonConvert.SerializeObject(_blacklist));
                     u.NewAlias(num);
-                    await Context.Client.GetUser(GetUser(num).user).SendMessageAsync($"you are not blacklisted");
+                    await Context.Client.GetUser(GetUser(num).user).SendMessageAsync($"you are now blacklisted"); // Thanks Austin :)
                     await ReplyAsync($"user {num} was blacklisted.");
                     return;
                 }
@@ -195,6 +195,28 @@ namespace localbot
             return;
         }
 
+        // Generates a newID for the anonUser who executes the command.
+        [Command(">set_color")]
+        public async Task ColorSet([Remainder] string text)
+        {
+            if(GetUser(Context.User.Id) == null)
+            {
+                if (activeUsers.Count / historyLength > maxID) // Are all possible newIDs used up? (to avoid infinite loop)
+                {
+                    await (Context.User).SendMessageAsync($"all IDs are currently in use, contact your mods to reset IDs");
+                    return;
+                }
+                int num = random.Next(maxID);
+                while (RecentlyUsed(num)) // This should in theory never infinitly loop because of the previous check
+                {
+                    random.Next(maxID);
+                }
+                activeUsers.Add(new AnonUser(Context.User.Id));
+                GetUser(Context.User.Id).NewAlias(num);
+            }
+            await ReplyAsync("bruh");
+        }
+
         // Sends a message to the anonChannel from a user's perspective
         [Command(">anon")]
         public async Task Anon([Remainder] string text)
@@ -206,6 +228,14 @@ namespace localbot
         // Sends a message to the relChannel from a user's perspective
         [Command(">rel")]
         public async Task Relationships([Remainder] string text)
+        {
+            await SendMessage(text, "relationships");
+            return;
+        }
+
+        // Sends a message to the relChannel from a user's perspective
+        [Command(">relationships")]
+        public async Task RelationshipsAlternate([Remainder] string text)
         {
             await SendMessage(text, "relationships");
             return;
@@ -244,6 +274,11 @@ namespace localbot
                 if (!_blacklist.ContainsKey(Context.User.Id))
                 {
                     int num = random.Next(maxID);
+                    if (activeUsers.Count / historyLength > maxID) // Are all possible newIDs used up? (to avoid infinite loop)
+                    {
+                        await (Context.User).SendMessageAsync($"all IDs are currently in use, contact your mods to reset IDs");
+                        return;
+                    }
                     while (RecentlyUsed(num)) // This should in theory never infinitly loop because of the previous check
                     {
                         random.Next(maxID);
