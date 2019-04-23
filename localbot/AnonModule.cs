@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using System.Collections;
@@ -86,7 +86,7 @@ namespace localbot
         }
 
         // Temporarily mutes a user's anon capabilities. Takes
-        // an anon id and the ammount of minutes they should be 
+        // an anon id and the amount of minutes they should be 
         // timed out for
         [Command(">timeout")]
         [RequireUserPermission(GuildPermission.KickMembers)]
@@ -335,32 +335,55 @@ namespace localbot
                 message.Title = current_id.ToString();
                 message.Description = text;
             }
-
-
             message.Color = GetUser(Context.User.Id).message_color;
-
+            
+            string channel;
             switch (where)
             {
                 case "message":
                     await (Context.Client.GetUser(GetUser(recipient).user))
                         .SendMessageAsync(embed: message.Build());
-                    break;
+                    return;
                 case "anon":
-                    await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "anonymous"))
-                        .SendMessageAsync(embed: message.Build());
-                    break;
-                case "relationships":
-                    await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "relationships"))
-                        .SendMessageAsync(embed: message.Build());
-                    break;
-                case "serious":
-                    await (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == "serious"))
-                        .SendMessageAsync(embed: message.Build());
+                    channel = "anonymous";
                     break;
                 default:
+                    channel = where;
                     break;
             }
 
+            var textChannel = Context.Client.GetGuild(serverID).TextChannels
+                .FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == channel);
+            var lastMessage = (await textChannel.GetMessagesAsync(1).FlattenAsync()).First() as IUserMessage;
+            if (lastMessage.Author.Id == Context.Client.CurrentUser.Id
+                && lastMessage.Embeds.Count != 0 
+                && lastMessage.Embeds.First().Title.StartsWith($"{current_id}"))
+            {
+                await lastMessage.ModifyAsync(m =>
+                {
+                    var lastEm = lastMessage.Embeds.First();
+                    var em = new EmbedBuilder{};
+                    string existingPart;
+                    if (lastEm.Description == null)
+                    {
+                        existingPart = lastEm.Title.Substring(lastEm.Title.IndexOf(":", StringComparison.Ordinal) + 2);
+                        em.Title = lastEm.Title.Substring(0, lastEm.Title.IndexOf(":", StringComparison.Ordinal));
+                    }
+                    else
+                    {
+                        existingPart = lastEm.Description;
+                        em.Title = lastEm.Title;
+                    }
+
+                    em.Color = lastEm.Color;
+                    em.Description = existingPart + "\n" + text;
+                    m.Embed = em.Build();
+                });
+            }
+            else
+            {
+                await textChannel.SendMessageAsync(embed: message.Build());
+            }
         }
 
         // Takes an int id and returns if any AnonUsers
