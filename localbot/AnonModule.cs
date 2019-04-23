@@ -197,7 +197,7 @@ namespace localbot
 
         // Generates a newID for the anonUser who executes the command.
         [Command(">set_color")]
-        public async Task ColorSet([Remainder] string text)
+        public async Task ColorSet(int r, int g, int b)
         {
             if(GetUser(Context.User.Id) == null)
             {
@@ -213,8 +213,17 @@ namespace localbot
                 }
                 activeUsers.Add(new AnonUser(Context.User.Id));
                 GetUser(Context.User.Id).NewAlias(num);
+                GetUser(Context.User.Id).message_color = new Color(r, g, b);
+            } else
+            {
+                GetUser(Context.User.Id).message_color = new Color(r, g, b);
             }
-            await ReplyAsync("bruh");
+
+            var message = new EmbedBuilder { };
+            message.Description = "You are now speaking under this color";
+
+            message.Color = GetUser(Context.User.Id).message_color;
+            await ReplyAsync(embed: message.Build());
         }
 
         // Sends a message to the anonChannel from a user's perspective
