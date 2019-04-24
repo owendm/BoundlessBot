@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using System.Collections;
@@ -86,7 +86,7 @@ namespace localbot
         }
 
         // Temporarily mutes a user's anon capabilities. Takes
-        // an anon id and the ammount of minutes they should be 
+        // an anon id and the amount of minutes they should be 
         // timed out for
         [Command(">timeout")]
         [RequireUserPermission(GuildPermission.KickMembers)]

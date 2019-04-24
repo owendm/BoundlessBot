@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -29,6 +29,7 @@ namespace localbot
                 await client.StartAsync();
 
                 await services.GetRequiredService<CommandHandlingService>().InitializeAsync();
+                services.GetRequiredService<PinService>();
 
                 await Task.Delay(-1);
             }
@@ -47,6 +48,7 @@ namespace localbot
                 .AddSingleton<DiscordSocketClient>()
                 .AddSingleton<CommandService>()
                 .AddSingleton<CommandHandlingService>()
+                .AddSingleton<PinService>()
                 .AddSingleton<HttpClient>()
                 .BuildServiceProvider();
         }
