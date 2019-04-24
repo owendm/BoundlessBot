@@ -53,7 +53,7 @@ namespace localbot
         // Changes the cooldown on newID
         [Command(">newid_cooldown")]
         [RequireUserPermission(GuildPermission.KickMembers)]
-        public async Task cooldownChange([Remainder] int num)
+        public async Task CooldownChange([Remainder] int num)
         {
             cooldown = new TimeSpan(0, num, 0);
             await ReplyAsync($"newID cooldown set to {num} minutes");
@@ -168,7 +168,7 @@ namespace localbot
             cur_user.NewAlias(num);
             cur_user.lastNewID = DateTime.Now;
 
-            Color newColor = new Color(random.Next(255), random.Next(255), random.Next(255));
+            Discord.Color newColor = new Discord.Color(random.Next(255), random.Next(255), random.Next(255));
             cur_user.message_color = newColor;
 
             await (Context.User).SendMessageAsync($"you are now speaking under id: `{num}`");
@@ -226,11 +226,48 @@ namespace localbot
             await ReplyAsync(embed: message.Build());
         }
 
+        [Command(">set_color")]
+        public async Task ColorSet(string hexString)
+        {
+            hexString = hexString.Replace("#", "");
+            uint colorcode;
+            if (!uint.TryParse(hexString, System.Globalization.NumberStyles.AllowHexSpecifier, null, out colorcode)) {
+                await (Context.User).SendMessageAsync($"wrong hex");
+                return;
+            }
+            if (GetUser(Context.User.Id) == null)
+            {
+                if (activeUsers.Count / historyLength > maxID) // Are all possible newIDs used up? (to avoid infinite loop)
+                {
+                    await (Context.User).SendMessageAsync($"all IDs are currently in use, contact your mods to reset IDs");
+                    return;
+                }
+                int num = random.Next(maxID);
+                while (RecentlyUsed(num)) // This should in theory never infinitly loop because of the previous check
+                {
+                    random.Next(maxID);
+                }
+                activeUsers.Add(new AnonUser(Context.User.Id));
+                GetUser(Context.User.Id).NewAlias(num);
+                GetUser(Context.User.Id).message_color = new Color(colorcode);
+            }
+            else
+            {
+                GetUser(Context.User.Id).message_color = new Color(colorcode);
+            }
+
+            var message = new EmbedBuilder { };
+            message.Description = "You are now speaking under this color";
+
+            message.Color = GetUser(Context.User.Id).message_color;
+            await ReplyAsync(embed: message.Build());
+        }
+
         // Sends a message to the anonChannel from a user's perspective
         [Command(">anon")]
         public async Task Anon([Remainder] string text)
         {
-            await SendMessage(text, "anon");
+            await SendMessage(text, "anonymous");
             return;
         }
 
@@ -294,7 +331,7 @@ namespace localbot
                     }
                     activeUsers.Add(new AnonUser(Context.User.Id));
                     GetUser(Context.User.Id).NewAlias(num);
-                    Color newColor = new Color(random.Next(255), random.Next(255), random.Next(255));
+                    Discord.Color newColor = new Discord.Color(random.Next(255), random.Next(255), random.Next(255));
                     GetUser(Context.User.Id).message_color = newColor;
                     await (Context.User).SendMessageAsync($"you are now speaking under id: `{num}`");
                 } else
@@ -314,7 +351,7 @@ namespace localbot
                 return;
             }
 
-            int current_id = GetUser(Context.User.Id).getID();
+            int current_id = GetUser(Context.User.Id).GetID();
 
             text = text.Replace("@everyone", "@\u200beveryone");
             text = text.Replace("@here", "@\u200bhere");
@@ -325,62 +362,39 @@ namespace localbot
             }
 
             // Keeping this here incase we decide to switch to embeds
-            var message = new EmbedBuilder{};
+            var message = new EmbedBuilder{ };
 
-            if (text.Length < 20)
-            {
-                message.Title = $"{current_id}: {text}";
-            } else
-            {
+            //if (text.Length < 20)
+            //{
+            //    message.Title = $"{current_id}: {text}";
+            //} else
+            //{
                 message.Title = current_id.ToString();
                 message.Description = text;
-            }
+            //}
+
+
             message.Color = GetUser(Context.User.Id).message_color;
-            
-            string channel;
-            switch (where)
+
+            if(where == "message")
             {
-                case "message":
-                    await (Context.Client.GetUser(GetUser(recipient).user))
+                await (Context.Client.GetUser(GetUser(recipient).user))
                         .SendMessageAsync(embed: message.Build());
-                    return;
-                case "anon":
-                    channel = "anonymous";
-                    break;
-                default:
-                    channel = where;
-                    break;
+                return;
             }
 
-            var textChannel = Context.Client.GetGuild(serverID).TextChannels
-                .FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == channel);
-            var lastMessage = (await textChannel.GetMessagesAsync(1).FlattenAsync()).First() as IUserMessage;
-            if (lastMessage.Author.Id == Context.Client.CurrentUser.Id
-                && lastMessage.Embeds.Count != 0 
-                && lastMessage.Embeds.First().Title.StartsWith($"{current_id}"))
+            var textChannel = (Context.Client.GetGuild(serverID).TextChannels.FirstOrDefault<SocketTextChannel>(textchannel => textchannel.Name == where));
+            var lastMessage = (await textChannel.GetMessagesAsync(1).FlattenAsync()).FirstOrDefault() as IUserMessage;
+            if (lastMessage.Author.Id == Context.Client.CurrentUser.Id && lastMessage.Embeds.Count != 0 && lastMessage.Embeds.First().Title.StartsWith($"{current_id}"))
             {
                 await lastMessage.ModifyAsync(m =>
                 {
-                    var lastEm = lastMessage.Embeds.First();
-                    var em = new EmbedBuilder{};
-                    string existingPart;
-                    if (lastEm.Description == null)
-                    {
-                        existingPart = lastEm.Title.Substring(lastEm.Title.IndexOf(":", StringComparison.Ordinal) + 2);
-                        em.Title = lastEm.Title.Substring(0, lastEm.Title.IndexOf(":", StringComparison.Ordinal));
-                    }
-                    else
-                    {
-                        existingPart = lastEm.Description;
-                        em.Title = lastEm.Title;
-                    }
-
-                    em.Color = lastEm.Color;
-                    em.Description = existingPart + "\n" + text;
-                    m.Embed = em.Build();
+                    var prevMessage = lastMessage.Embeds.First();
+                    var newEmbed = prevMessage.ToEmbedBuilder();
+                    newEmbed.Description += "\n" + text;
+                    m.Embed = newEmbed.Build();
                 });
-            }
-            else
+            } else
             {
                 await textChannel.SendMessageAsync(embed: message.Build());
             }
@@ -405,7 +419,7 @@ namespace localbot
         // the id or null if nobody is using it
         private AnonUser GetUser(int id)
         {
-            return activeUsers.Find(i => i.getID() == id);
+            return activeUsers.Find(i => i.GetID() == id);
         }
 
         private class AnonUser
@@ -415,7 +429,7 @@ namespace localbot
             public DateTime lastNewID; // Last time this user ran >newID
             public bool timeout; // If this user is timed out
             public DateTime timeoutEnd; // The time they are "back in"
-            public Color message_color;
+            public Discord.Color message_color;
 
             // Takes an unsigned long user and returns a AnonUser with 
             // user set to the user
@@ -426,7 +440,7 @@ namespace localbot
             }
 
             // Returns the current ID number that the AnonUser has set
-            public int getID()
+            public int GetID()
             {
                 return ids[0];
             }
