@@ -44,8 +44,12 @@ namespace localbot
 
         private ServiceProvider ConfigureServices()
         {
+            var config = new DiscordSocketConfig
+            {
+                LogLevel = LogSeverity.Debug
+            };
             return new ServiceCollection()
-                .AddSingleton<DiscordSocketClient>()
+                .AddSingleton<DiscordSocketClient>(new DiscordSocketClient(config))
                 .AddSingleton<CommandService>()
                 .AddSingleton<CommandHandlingService>()
                 .AddSingleton<PinService>()
