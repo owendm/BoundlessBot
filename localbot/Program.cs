@@ -24,6 +24,7 @@ namespace localbot
             {
                 var client = services.GetRequiredService<DiscordSocketClient>();
                 client.Log += LogAsync;
+                client.Disconnected += Disconnected;
                 services.GetRequiredService<CommandService>().Log += LogAsync;
                 await client.LoginAsync(TokenType.Bot, token);
                 await client.StartAsync();
@@ -39,6 +40,13 @@ namespace localbot
         {
             Console.WriteLine(log.ToString());
 
+            return Task.CompletedTask;
+        }
+        
+        private Task Disconnected(Exception e)
+        {
+            Console.WriteLine("Closing because of disconnection. Exception: " + e.ToString());
+            Environment.Exit(1);
             return Task.CompletedTask;
         }
 
